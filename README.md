@@ -31,7 +31,7 @@ The app provides a complete implementation of app-specific CPU monitoring and sy
 
 ## Screenshots
 
-[Add screenshots of your app here]
+![image](https://github.com/user-attachments/assets/7003c2eb-6d46-4d56-b4d8-d7b7fd827da0)
 
 ## Requirements
 
