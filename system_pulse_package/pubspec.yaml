@@ -14,3 +14,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.systempulse.monitor
+        pluginClass: SystemPulsePlugin

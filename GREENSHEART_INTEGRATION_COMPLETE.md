@@ -110,13 +110,27 @@ Add to your `android/app/src/main/AndroidManifest.xml`:
 </manifest>
 ```
 
-## ⚡ **STEP 4: Run Integration**
+## ⚡ **STEP 4: Clean & Rebuild (CRITICAL)**
+
+**IMPORTANT:** After adding the SystemPulse dependency, you MUST clean and rebuild to register the Android plugin:
 
 ```bash
+# 1. Clean everything
 fvm flutter clean
+
+# 2. Get dependencies 
 fvm flutter pub get
+
+# 3. Clean Android build (very important!)
+cd android
+./gradlew clean
+cd ..
+
+# 4. Run the app
 fvm flutter run
 ```
+
+**Why this is needed:** The SystemPulse package includes Android native code that needs to be compiled and registered with your app. Flutter needs a clean build to properly integrate the plugin.
 
 ## 🎯 **What You'll Get**
 
