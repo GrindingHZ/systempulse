@@ -1,0 +1,16 @@
+name: system_pulse_monitor
+description: A minimal Flutter package for adding CPU and memory monitoring with floating overlay support.
+version: 1.0.0
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+  flutter: ">=3.7.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
