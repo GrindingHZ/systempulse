@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:cpu_memory_tracking_app/screens/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final VoidCallback? onToggleOverlay;
+  final bool? showOverlay;
+  
+  const SplashScreen({
+    super.key,
+    this.onToggleOverlay,
+    this.showOverlay,
+  });
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -21,7 +28,12 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            onToggleOverlay: widget.onToggleOverlay,
+            showOverlay: widget.showOverlay ?? false,
+          ),
+        ),
       );
     }
   }

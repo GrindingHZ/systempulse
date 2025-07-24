@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/overlay_background"
+    android:padding="8dp">
+
+    <!-- Always visible compact view -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CPU"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/cpu_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0.0%"
+            android:textColor="#4CAF50"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginStart="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MEM"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp" />
+
+        <TextView
+            android:id="@+id/memory_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0.0%"
+            android:textColor="#2196F3"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginStart="4dp" />
+
+    </LinearLayout>
+
+    <!-- Detailed view (shown when expanded) -->
+    <LinearLayout
+        android:id="@+id/overlay_details"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginTop="8dp">
+
+        <!-- CPU Progress Bar -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="32dp"
+                android:layout_height="wrap_content"
+                android:text="CPU"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp" />
+
+            <FrameLayout
+                android:layout_width="100dp"
+                android:layout_height="8dp"
+                android:background="#33FFFFFF"
+                android:layout_marginStart="4dp">
+
+                <View
+                    android:id="@+id/cpu_progress"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:background="#4CAF50" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+        <!-- Memory Progress Bar -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:layout_width="32dp"
+                android:layout_height="wrap_content"
+                android:text="MEM"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp" />
+
+            <FrameLayout
+                android:layout_width="100dp"
+                android:layout_height="8dp"
+                android:background="#33FFFFFF"
+                android:layout_marginStart="4dp">
+
+                <View
+                    android:id="@+id/memory_progress"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:background="#2196F3" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:cpu_memory_tracking_app/providers/performance_provider.dart';
+import 'package:cpu_memory_tracking_app/providers/floating_overlay_provider.dart';
 import 'package:cpu_memory_tracking_app/utils/theme.dart';
 import 'package:cpu_memory_tracking_app/widgets/animated_gauge.dart';
 import 'package:cpu_memory_tracking_app/widgets/live_performance_chart.dart';
@@ -13,7 +14,14 @@ import 'package:cpu_memory_tracking_app/screens/settings_screen.dart';
 import 'package:cpu_memory_tracking_app/screens/device_info_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onToggleOverlay;
+  final bool showOverlay;
+  
+  const HomeScreen({
+    super.key,
+    this.onToggleOverlay,
+    this.showOverlay = false,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,11 +35,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          _DashboardView(),
-          RecordingHistoryScreen(),
-          DeviceInfoScreen(),
-          SettingsScreen(),
+        children: [
+          _DashboardView(
+            onToggleOverlay: widget.onToggleOverlay,
+            showOverlay: widget.showOverlay,
+          ),
+          const RecordingHistoryScreen(),
+          const DeviceInfoScreen(),
+          const SettingsScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -65,7 +76,13 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _DashboardView extends StatelessWidget {
-  const _DashboardView();
+  final VoidCallback? onToggleOverlay;
+  final bool showOverlay;
+  
+  const _DashboardView({
+    this.onToggleOverlay,
+    this.showOverlay = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +126,46 @@ class _DashboardView extends StatelessWidget {
               return RecordingIndicator(
                 isRecording: provider.isRecording,
                 duration: provider.currentRecordingDuration,
+              );
+            },
+          ),
+          // Performance Overlay Toggle Button
+          if (onToggleOverlay != null)
+            IconButton(
+              icon: Icon(
+                showOverlay ? Icons.visibility_off : Icons.analytics,
+                color: showOverlay ? Colors.green : null,
+              ),
+              onPressed: onToggleOverlay,
+              tooltip: showOverlay ? 'Hide Performance Overlay' : 'Show Performance Overlay',
+            ),
+          // Floating Overlay Toggle Button
+          Consumer<FloatingOverlayProvider>(
+            builder: (context, overlayProvider, child) {
+              return IconButton(
+                icon: Icon(
+                  overlayProvider.isOverlayActive ? Icons.picture_in_picture : Icons.open_in_new,
+                  color: overlayProvider.isOverlayActive ? Colors.orange : null,
+                ),
+                onPressed: () async {
+                  await overlayProvider.toggleOverlay();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          overlayProvider.isOverlayActive 
+                            ? 'Floating overlay started! You can now minimize the app and use other apps while monitoring performance.'
+                            : 'Floating overlay stopped.',
+                        ),
+                        duration: const Duration(seconds: 3),
+                        backgroundColor: overlayProvider.isOverlayActive ? Colors.green : Colors.orange,
+                      ),
+                    );
+                  }
+                },
+                tooltip: overlayProvider.isOverlayActive 
+                  ? 'Stop Floating Overlay' 
+                  : 'Start Floating Overlay',
               );
             },
           ),
