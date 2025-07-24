@@ -27,41 +27,45 @@ class SystemPulseWrapper extends StatelessWidget {
           },
         ),
       ],
-      child: Stack(
-        children: [
-          child,
-          // Floating overlay toggle button
-          Positioned(
-            top: 50,
-            right: 10,
-            child: Consumer<FloatingOverlayProvider>(
-              builder: (context, provider, child) {
-                return FloatingActionButton.small(
-                  onPressed: () async {
-                    await provider.toggleOverlay();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            provider.isOverlayActive 
-                              ? 'Floating overlay started! Switch to other apps to see monitoring.'
-                              : 'Floating overlay stopped.',
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
-                  child: Icon(
-                    provider.isOverlayActive 
-                      ? Icons.picture_in_picture 
-                      : Icons.analytics,
+      child: child, // Just return the child without Stack to avoid Directionality issues
+    );
+  }
+}
+
+/// Use this widget inside your app (after MaterialApp) to show the floating button
+class SystemPulseFloatingButton extends StatelessWidget {
+  const SystemPulseFloatingButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 50,
+      right: 10,
+      child: Consumer<FloatingOverlayProvider>(
+        builder: (context, provider, child) {
+          return FloatingActionButton.small(
+            onPressed: () async {
+              await provider.toggleOverlay();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      provider.isOverlayActive 
+                        ? 'Floating overlay started! Switch to other apps to see monitoring.'
+                        : 'Floating overlay stopped.',
+                    ),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
-              },
+              }
+            },
+            child: Icon(
+              provider.isOverlayActive 
+                ? Icons.picture_in_picture 
+                : Icons.analytics,
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
