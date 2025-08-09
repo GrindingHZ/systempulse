@@ -2,13 +2,10 @@ package com.example.cpu_memory_tracking_app
 
 import android.app.ActivityManager
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Debug
 import android.os.Process
 import android.os.SystemClock
-import android.provider.Settings
 import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -19,9 +16,6 @@ class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.example.cpu_memory_tracking_app/performance"
     private val PERFORMANCE_TRACKER_CHANNEL = "performance_tracker"
     private val HARDWARE_CHANNEL = "device_hardware_info"
-    private val FLOATING_OVERLAY_CHANNEL = "floating_overlay"
-    
-    private var overlayService: OverlayService? = null
     
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -65,63 +59,6 @@ class MainActivity: FlutterActivity() {
                         "memoryTotalMB" to ((memoryInfo["totalMemory"] as Long) / (1024 * 1024))
                     )
                     result.success(performanceData)
-                }
-                else -> result.notImplemented()
-            }
-        }
-        
-        // Floating overlay channel
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, FLOATING_OVERLAY_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "hasOverlayPermission" -> {
-                    val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        Settings.canDrawOverlays(this)
-                    } else {
-                        true
-                    }
-                    result.success(hasPermission)
-                }
-                "requestOverlayPermission" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (!Settings.canDrawOverlays(this)) {
-                            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, 
-                                               Uri.parse("package:$packageName"))
-                            startActivity(intent)
-                            result.success(false) // User needs to grant permission manually
-                        } else {
-                            result.success(true)
-                        }
-                    } else {
-                        result.success(true)
-                    }
-                }
-                "startOverlay" -> {
-                    if (overlayService == null) {
-                        overlayService = OverlayService(this)
-                    }
-                    val started = overlayService!!.startOverlay()
-                    result.success(started)
-                }
-                "stopOverlay" -> {
-                    val stopped = overlayService?.stopOverlay() ?: true
-                    result.success(stopped)
-                }
-                "updateOverlayData" -> {
-                    val cpuUsage = call.argument<Double>("cpuUsage") ?: 0.0
-                    val memoryUsage = call.argument<Double>("memoryUsage") ?: 0.0
-                    println("DEBUG: MainActivity received overlay data - CPU: $cpuUsage%, Memory: $memoryUsage%")
-                    overlayService?.updateData(cpuUsage, memoryUsage)
-                    result.success(null)
-                }
-                "setOverlayPosition" -> {
-                    val x = call.argument<Double>("x") ?: 0.0
-                    val y = call.argument<Double>("y") ?: 0.0
-                    overlayService?.setPosition(x.toFloat(), y.toFloat())
-                    result.success(null)
-                }
-                "toggleOverlayExpanded" -> {
-                    overlayService?.toggleExpanded()
-                    result.success(null)
                 }
                 else -> result.notImplemented()
             }
