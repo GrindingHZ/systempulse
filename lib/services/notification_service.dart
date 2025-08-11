@@ -147,6 +147,44 @@ class NotificationService {
     await _notifications.cancel(_recordingNotificationId);
   }
 
+  /// Show a general notification to the user
+  Future<void> showGeneralNotification(String title, String body) async {
+    if (!_isInitialized) return;
+    
+    final enabled = await isNotificationEnabled();
+    if (!enabled) return;
+
+    const androidDetails = AndroidNotificationDetails(
+      'general',
+      'General Notifications',
+      channelDescription: 'General app notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: false,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    // Use a unique ID for general notifications
+    final notificationId = DateTime.now().millisecondsSinceEpoch % 1000000;
+    
+    await _notifications.show(
+      notificationId,
+      title,
+      body,
+      details,
+    );
+  }
+
   /// Check if notifications are enabled
   Future<bool> isNotificationEnabled() async {
     final prefs = await SharedPreferences.getInstance();

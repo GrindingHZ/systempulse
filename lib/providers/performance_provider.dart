@@ -35,6 +35,7 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   RecordingSession? _currentSession;
   Timer? _recordingTimer;
   Timer? _liveMonitoringTimer;
+  DateTime? _lastAutoSave;
   
   // Historical data
   List<RecordingSession> _sessions = [];
@@ -57,6 +58,7 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   List<PerformanceData> get liveChartData => List.unmodifiable(_liveChartData);
   Duration get currentRecordingDuration => 
       _currentSession?.duration ?? Duration.zero;
+  DateTime? get lastAutoSave => _lastAutoSave;
   NotificationService get notificationService => _notificationService;
   FileExportService get fileExportService => _fileExportService;
 
@@ -104,6 +106,11 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    // print('DEBUG: PerformanceProvider disposing - performing final auto-save');
+    
+    // Perform final auto-save before disposing
+    _autoSaveCurrentRecording();
+    
     WidgetsBinding.instance.removeObserver(this);
     _recordingTimer?.cancel();
     _liveMonitoringTimer?.cancel();
@@ -114,77 +121,106 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     
+    // print('DEBUG: App lifecycle changed to: $state');
+    
     switch (state) {
       case AppLifecycleState.paused:
-        _handleAppPaused();
+        // App backgrounded - continue recording normally, no auto-save
+        // print('DEBUG: App paused - continuing recording in background');
         break;
       case AppLifecycleState.detached:
-        _handleAppDetached();
+        // App being killed - perform auto-save
+        _handleAppKilled();
         break;
       case AppLifecycleState.resumed:
-        _handleAppResumed();
+        // print('DEBUG: App resumed from background');
         break;
       case AppLifecycleState.inactive:
-        // App is transitioning between states, auto-save as precaution
-        _autoSaveCurrentRecording();
+        // App transitioning - do nothing, let it transition normally
+        // print('DEBUG: App inactive (transitioning)');
         break;
       case AppLifecycleState.hidden:
-        _handleAppPaused(); // Treat as paused
+        // App hidden but not killed - continue recording
+        // print('DEBUG: App hidden - continuing recording');
         break;
     }
   }
 
-  // Handle app going to background
-  void _handleAppPaused() async {
-    print('DEBUG: App paused - auto-saving recording if active');
+  // Handle app being killed/terminated - this is the ONLY time we auto-save
+  void _handleAppKilled() async {
+    // print('DEBUG: App being killed - performing emergency auto-save');
     await _autoSaveCurrentRecording();
     await _saveRecordingState();
   }
 
-  // Handle app being killed/detached
-  void _handleAppDetached() async {
-    print('DEBUG: App detached - force saving recording');
-    await _autoSaveCurrentRecording();
-    await _clearRecordingState();
-  }
-
-  // Handle app returning to foreground
-  void _handleAppResumed() async {
-    print('DEBUG: App resumed - checking recording state');
-    // The recording should continue automatically if it was active
-  }
-
-  // Auto-save current recording without stopping it
+  // Emergency auto-save current recording without stopping it (only on app kill)
   Future<void> _autoSaveCurrentRecording() async {
     if (!_isRecording || _currentSession == null) return;
     
     try {
-      print('DEBUG: Auto-saving current recording with ${_currentSession!.dataPoints.length} data points');
+      // print('DEBUG: Emergency auto-save triggered - app being terminated');
+      // print('DEBUG: Saving recording with ${_currentSession!.dataPoints.length} data points');
+      
+      // Show notification to user about emergency auto-save
+      _notificationService.showGeneralNotification(
+        'Recording Emergency Saved',
+        'App was terminated. Recording auto-saved with ${_currentSession!.dataPoints.length} data points',
+      );
       
       // Create a snapshot of the current session
       final snapshot = _currentSession!.copyWith(
         endTime: DateTime.now(), // Mark current time as end for the snapshot
+        id: '${_currentSession!.id}_autosave_${DateTime.now().millisecondsSinceEpoch}',
       );
       
-      // Save to CSV
+      // Save to CSV with retry mechanism
       String? filePath;
-      try {
-        filePath = await _saveSessionToCsv(snapshot);
-        print('DEBUG: Auto-save successful: $filePath');
-      } catch (e) {
-        print('DEBUG: Auto-save failed: $e');
+      int retryCount = 0;
+      while (retryCount < 3 && filePath == null) {
+        try {
+          filePath = await _saveSessionToCsv(snapshot);
+          // print('DEBUG: Emergency auto-save successful: $filePath');
+          break;
+        } catch (e) {
+          retryCount++;
+          // print('DEBUG: Emergency auto-save attempt $retryCount failed: $e');
+          if (retryCount < 3) {
+            await Future.delayed(Duration(milliseconds: 200)); // Shorter delay for emergency save
+          }
+        }
+      }
+      
+      if (filePath == null) {
+        // print('ERROR: Emergency auto-save failed after 3 attempts');
+        _notificationService.showGeneralNotification(
+          'Emergency Save Failed',
+          'Failed to save recording during app termination. Data may be lost.',
+        );
+        return;
       }
       
       // Update session with file path
-      if (filePath != null) {
-        _currentSession = _currentSession!.copyWith(filePath: filePath);
-      }
+      _currentSession = _currentSession!.copyWith(filePath: filePath);
       
       // Save current state to SharedPreferences for recovery
       await _saveRecordingState();
       
+      // Add the auto-saved session to history for user visibility
+      final autoSavedSession = snapshot.copyWith(filePath: filePath);
+      _sessions.insert(0, autoSavedSession);
+      
+      // Update last auto-save timestamp
+      _lastAutoSave = DateTime.now();
+      notifyListeners();
+      
+      // print('DEBUG: Emergency auto-save completed successfully');
+      
     } catch (e) {
-      print('DEBUG: Auto-save error: $e');
+      // print('ERROR: Critical emergency auto-save error: $e');
+      _notificationService.showGeneralNotification(
+        'Emergency Save Error',
+        'Critical error during emergency save: ${e.toString()}',
+      );
     }
   }
 
@@ -204,9 +240,9 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
       };
       
       await prefs.setString('recording_state', jsonEncode(state));
-      print('DEBUG: Recording state saved');
+      // print('DEBUG: Recording state saved');
     } catch (e) {
-      print('DEBUG: Failed to save recording state: $e');
+      // print('DEBUG: Failed to save recording state: $e');
     }
   }
 
@@ -221,14 +257,14 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
         final isRecording = state['isRecording'] as bool? ?? false;
         
         if (isRecording) {
-          print('DEBUG: Found interrupted recording session, prompting user...');
+          // print('DEBUG: Found interrupted recording session, prompting user...');
           // Note: In a real app, you might want to show a dialog to ask user
           // For now, we'll just clear the state and not resume
           await _clearRecordingState();
         }
       }
     } catch (e) {
-      print('DEBUG: Failed to restore recording state: $e');
+      // print('DEBUG: Failed to restore recording state: $e');
     }
   }
 
@@ -237,9 +273,9 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('recording_state');
-      print('DEBUG: Recording state cleared');
+      // print('DEBUG: Recording state cleared');
     } catch (e) {
-      print('DEBUG: Failed to clear recording state: $e');
+      // print('DEBUG: Failed to clear recording state: $e');
     }
   }
 
@@ -288,11 +324,11 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // Update current performance data
   Future<void> _updateCurrentData() async {
-    print('DEBUG: Attempting to get current performance data...');
+    // print('DEBUG: Attempting to get current performance data...');
     _currentData = await _getPerformanceData();
     
     if (_currentData != null) {
-      print('DEBUG: Received performance data: CPU: ${_currentData!.cpuUsage}%, Memory: ${_currentData!.memoryUsage}%');
+      // print('DEBUG: Received performance data: CPU: ${_currentData!.cpuUsage}%, Memory: ${_currentData!.memoryUsage}%');
     }
     
     // Add to live chart data (Task Manager style)
@@ -318,14 +354,14 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
     
     // Get fresh performance data specifically for recording
     final recordingData = await _getPerformanceData();
-    print('DEBUG: Collected data point - CPU: ${recordingData.cpuUsage}%, Memory: ${recordingData.memoryUsage}%');
+    // print('DEBUG: Collected data point - CPU: ${recordingData.cpuUsage}%, Memory: ${recordingData.memoryUsage}%');
     
     // Add to current recording session
     _currentSession = _currentSession!.copyWith(
       dataPoints: [..._currentSession!.dataPoints, recordingData],
     );
     
-    print('DEBUG: Session now has ${_currentSession!.dataPoints.length} data points');
+    // print('DEBUG: Session now has ${_currentSession!.dataPoints.length} data points');
 
     // Update notification with fresh data
     await _updateRecordingNotification();
@@ -352,6 +388,7 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
     );
 
     _isRecording = true;
+    _lastAutoSave = null; // Clear previous auto-save indicator
     
     // Start recording timer based on user-defined interval (not live monitoring frequency)
     _recordingTimer = Timer.periodic(Duration(seconds: _recordingInterval), (timer) async {
@@ -363,7 +400,7 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
     
     // Show persistent notification with initial data
     if (_currentData != null) {
-      print('DEBUG: Showing recording notification...');
+      // print('DEBUG: Showing recording notification...');
       await _notificationService.showRecordingNotification(
         duration: _currentSession!.duration,
         cpuUsage: _currentData!.cpuUsage,
@@ -378,8 +415,8 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> stopRecording() async {
     if (!_isRecording || _currentSession == null) return;
 
-    print('DEBUG: Stopping recording...');
-    print('DEBUG: Current session has ${_currentSession!.dataPoints.length} data points');
+    // print('DEBUG: Stopping recording...');
+    // print('DEBUG: Current session has ${_currentSession!.dataPoints.length} data points');
 
     _isRecording = false;
     _recordingTimer?.cancel(); // Stop the intensive recording timer
@@ -388,29 +425,29 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
       endTime: DateTime.now(),
     );
 
-    print('DEBUG: Session duration: ${endedSession.duration}');
+    // print('DEBUG: Session duration: ${endedSession.duration}');
 
     // Try to save to CSV, but don't fail if it doesn't work
     String? filePath;
     try {
       filePath = await _saveSessionToCsv(endedSession);
-      print('DEBUG: Session saved to: $filePath');
+      // print('DEBUG: Session saved to: $filePath');
     } catch (e) {
-      print('DEBUG: Failed to save CSV (continuing anyway): $e');
+      // print('DEBUG: Failed to save CSV (continuing anyway): $e');
       // Continue without CSV file path
     }
     
     final finalSession = endedSession.copyWith(filePath: filePath);
     
     _sessions.add(finalSession);
-    print('DEBUG: Added session to list. Total sessions: ${_sessions.length}');
+    // print('DEBUG: Added session to list. Total sessions: ${_sessions.length}');
     _currentSession = null;
     
     try {
       await _saveSessions();
-      print('DEBUG: Sessions saved to SharedPreferences');
+      // print('DEBUG: Sessions saved to SharedPreferences');
     } catch (e) {
-      print('DEBUG: Failed to save sessions: $e');
+      // print('DEBUG: Failed to save sessions: $e');
     }
     
     // Clear recording state since we're done
@@ -441,12 +478,12 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
       if (result.isSuccess) {
         return result.filePath!;
       } else {
-        print('DEBUG: Downloads export failed: ${result.error}');
+        // print('DEBUG: Downloads export failed: ${result.error}');
         // Fall back to internal storage
         return await _saveToInternalStorage(session);
       }
     } catch (e) {
-      print('DEBUG: Export service failed: $e');
+      // print('DEBUG: Export service failed: $e');
       // Fall back to internal storage
       return await _saveToInternalStorage(session);
     }
@@ -463,10 +500,10 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
       final csvContent = _generateSimpleCsvContent(session);
       await file.writeAsString(csvContent);
       
-      print('DEBUG: Saved to internal storage: ${file.path}');
+      // print('DEBUG: Saved to internal storage: ${file.path}');
       return file.path;
     } catch (e) {
-      print('DEBUG: Internal storage save failed: $e');
+      // print('DEBUG: Internal storage save failed: $e');
       throw Exception('Failed to save recording: $e');
     }
   }
@@ -585,24 +622,24 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   // Load saved sessions (placeholder - would implement proper persistence)
   Future<void> _loadSessions() async {
     try {
-      print('DEBUG: Loading sessions from SharedPreferences');
+      // print('DEBUG: Loading sessions from SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
       final String? sessionsJson = prefs.getString('pulse_track_sessions');
       
       if (sessionsJson != null) {
-        print('DEBUG: Found sessions JSON in SharedPreferences: $sessionsJson');
+        // print('DEBUG: Found sessions JSON in SharedPreferences: $sessionsJson');
         final List<dynamic> sessionsList = jsonDecode(sessionsJson);
-        print('DEBUG: Decoded ${sessionsList.length} sessions');
+        // print('DEBUG: Decoded ${sessionsList.length} sessions');
         _sessions = sessionsList.map((sessionJson) {
           return RecordingSession.fromJson(sessionJson);
         }).toList();
-        print('DEBUG: Loaded ${_sessions.length} sessions successfully');
+        // print('DEBUG: Loaded ${_sessions.length} sessions successfully');
       } else {
-        print('DEBUG: No sessions found in SharedPreferences');
+        // print('DEBUG: No sessions found in SharedPreferences');
         _sessions = [];
       }
     } catch (e) {
-      print('DEBUG: Error loading sessions: $e');
+      // print('DEBUG: Error loading sessions: $e');
       _sessions = [];
     }
     notifyListeners();
@@ -611,16 +648,16 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   // Save sessions (placeholder - would implement proper persistence)
   Future<void> _saveSessions() async {
     try {
-      print('DEBUG: Saving ${_sessions.length} sessions to SharedPreferences');
+      // print('DEBUG: Saving ${_sessions.length} sessions to SharedPreferences');
       final prefs = await SharedPreferences.getInstance();
       final List<Map<String, dynamic>> sessionsJson = _sessions.map((session) {
         return session.toJson();
       }).toList();
-      print('DEBUG: Sessions JSON length: ${sessionsJson.length}');
+      // print('DEBUG: Sessions JSON length: ${sessionsJson.length}');
       await prefs.setString('pulse_track_sessions', jsonEncode(sessionsJson));
-      print('DEBUG: Sessions saved successfully');
+      // print('DEBUG: Sessions saved successfully');
     } catch (e) {
-      print('DEBUG: Error saving sessions: $e');
+      // print('DEBUG: Error saving sessions: $e');
       // Handle save error
     }
   }

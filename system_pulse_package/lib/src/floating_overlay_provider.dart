@@ -34,7 +34,7 @@ class FloatingOverlayProvider extends ChangeNotifier {
       }
       return started;
     } catch (e) {
-      debugPrint('Error starting overlay: $e');
+      // debugPrint('Error starting overlay: $e');
       return false;
     }
   }
@@ -49,7 +49,7 @@ class FloatingOverlayProvider extends ChangeNotifier {
       }
       return stopped;
     } catch (e) {
-      debugPrint('Error stopping overlay: $e');
+      // debugPrint('Error stopping overlay: $e');
       return false;
     }
   }
@@ -78,7 +78,7 @@ class FloatingOverlayProvider extends ChangeNotifier {
         });
       }
     } catch (e) {
-      debugPrint('Error updating overlay data: $e');
+      // debugPrint('Error updating overlay data: $e');
     }
   }
 

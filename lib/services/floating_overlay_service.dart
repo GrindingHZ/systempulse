@@ -11,7 +11,7 @@ class FloatingOverlayService {
       final bool hasPermission = await _channel.invokeMethod('hasOverlayPermission');
       return hasPermission;
     } catch (e) {
-      print('Error checking overlay permission: $e');
+      // print('Error checking overlay permission: $e');
       return false;
     }
   }
@@ -22,7 +22,7 @@ class FloatingOverlayService {
       final bool granted = await _channel.invokeMethod('requestOverlayPermission');
       return granted;
     } catch (e) {
-      print('Error requesting overlay permission: $e');
+      // print('Error requesting overlay permission: $e');
       return false;
     }
   }
@@ -39,7 +39,7 @@ class FloatingOverlayService {
       _isOverlayActive = started;
       return started;
     } catch (e) {
-      print('Error starting overlay: $e');
+      // print('Error starting overlay: $e');
       return false;
     }
   }
@@ -51,7 +51,7 @@ class FloatingOverlayService {
       _isOverlayActive = !stopped;
       return stopped;
     } catch (e) {
-      print('Error stopping overlay: $e');
+      // print('Error stopping overlay: $e');
       return false;
     }
   }
@@ -67,7 +67,7 @@ class FloatingOverlayService {
         'memoryUsage': memoryUsage,
       });
     } catch (e) {
-      print('Error updating overlay data: $e');
+      // print('Error updating overlay data: $e');
     }
   }
 
@@ -82,7 +82,7 @@ class FloatingOverlayService {
         'y': y,
       });
     } catch (e) {
-      print('Error setting overlay position: $e');
+      // print('Error setting overlay position: $e');
     }
   }
 
@@ -91,7 +91,7 @@ class FloatingOverlayService {
     try {
       await _channel.invokeMethod('toggleOverlayExpanded');
     } catch (e) {
-      print('Error toggling overlay: $e');
+      // print('Error toggling overlay: $e');
     }
   }
 }

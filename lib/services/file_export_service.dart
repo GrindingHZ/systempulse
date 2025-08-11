@@ -16,15 +16,15 @@ class FileExportService {
   /// Export session to CSV and save to Downloads folder
   Future<ExportResult> exportToDownloads(RecordingSession session) async {
     try {
-      print('📁 Starting CSV export to Downloads folder...');
+      // print('📁 Starting CSV export to Downloads folder...');
       
       // Request storage permissions
       final hasPermission = await _requestStoragePermissions();
       if (!hasPermission) {
-        print('❌ Storage permission denied');
+        // print('❌ Storage permission denied');
         return ExportResult.error('Storage permission denied');
       }
-      print('✅ Storage permissions granted');
+      // print('✅ Storage permissions granted');
 
       // Get Downloads directory with multiple fallback strategies
       Directory downloadsDir;
@@ -34,9 +34,9 @@ class FileExportService {
         final publicDownloads = Directory('/storage/emulated/0/Download');
         if (await publicDownloads.exists()) {
           downloadsDir = publicDownloads;
-          print('✅ Using public Downloads: ${publicDownloads.path}');
+          // print('✅ Using public Downloads: ${publicDownloads.path}');
         } else {
-          print('⚠️ Public Downloads not accessible, trying alternatives...');
+          // print('⚠️ Public Downloads not accessible, trying alternatives...');
           
           // Strategy 2: Try external storage Downloads
           Directory? altDownloads;
@@ -49,11 +49,11 @@ class FileExportService {
               
               if (await testDir.exists()) {
                 altDownloads = testDir;
-                print('✅ Using external Downloads: ${testDir.path}');
+                // print('✅ Using external Downloads: ${testDir.path}');
               }
             }
           } catch (e) {
-            print('⚠️ External storage access failed: $e');
+            // print('⚠️ External storage access failed: $e');
           }
           
           // Strategy 3: Fallback to app documents directory
@@ -61,17 +61,17 @@ class FileExportService {
             downloadsDir = altDownloads;
           } else {
             downloadsDir = await getApplicationDocumentsDirectory();
-            print('⚠️ Fallback to app directory: ${downloadsDir.path}');
+            // print('⚠️ Fallback to app directory: ${downloadsDir.path}');
           }
         }
       } else {
         // For other platforms, use Documents directory
         downloadsDir = await getApplicationDocumentsDirectory();
-        print('✅ Using Documents directory: ${downloadsDir.path}');
+        // print('✅ Using Documents directory: ${downloadsDir.path}');
       }
 
       if (!await downloadsDir.exists()) {
-        print('❌ Could not access storage directory: ${downloadsDir.path}');
+        // print('❌ Could not access storage directory: ${downloadsDir.path}');
         return ExportResult.error('Could not access Downloads folder');
       }
 
@@ -80,7 +80,7 @@ class FileExportService {
       final fileName = 'SystemPulse_${session.id}_$timestamp.csv';
       final file = File('${downloadsDir.path}/$fileName');
       
-      print('📄 Creating file: ${file.path}');
+      // print('📄 Creating file: ${file.path}');
 
       // Generate CSV content
       final csvContent = _generateCsvContent(session);
@@ -91,14 +91,14 @@ class FileExportService {
       // Verify file was created successfully
       if (await file.exists()) {
         final fileSize = await file.length();
-        print('✅ File created successfully: ${file.path} ($fileSize bytes)');
+        // print('✅ File created successfully: ${file.path} ($fileSize bytes)');
         return ExportResult.success(file.path);
       } else {
-        print('❌ File creation failed');
+        // print('❌ File creation failed');
         return ExportResult.error('Failed to create file');
       }
     } catch (e) {
-      print('❌ Export error: $e');
+      // print('❌ Export error: $e');
       return ExportResult.error('Export failed: $e');
     }
   }
@@ -275,46 +275,46 @@ class FileExportService {
   /// Request storage permissions
   Future<bool> _requestStoragePermissions() async {
     if (Platform.isAndroid) {
-      print('🔑 Requesting Android storage permissions...');
+      // print('🔑 Requesting Android storage permissions...');
       
       // For Android 11+ (API 30+), we need different permissions
       final androidInfo = await DeviceInfoPlugin().androidInfo;
-      print('📱 Android SDK: ${androidInfo.version.sdkInt}');
+      // print('📱 Android SDK: ${androidInfo.version.sdkInt}');
       
       if (androidInfo.version.sdkInt >= 30) {
         // Android 11+ - Request manage external storage first
-        print('🔐 Requesting MANAGE_EXTERNAL_STORAGE for Android 11+...');
+        // print('🔐 Requesting MANAGE_EXTERNAL_STORAGE for Android 11+...');
         var status = await Permission.manageExternalStorage.status;
         
         if (!status.isGranted) {
           status = await Permission.manageExternalStorage.request();
-          print('📋 MANAGE_EXTERNAL_STORAGE result: $status');
+          // print('📋 MANAGE_EXTERNAL_STORAGE result: $status');
         }
         
         if (status.isGranted) {
-          print('✅ MANAGE_EXTERNAL_STORAGE granted');
+          // print('✅ MANAGE_EXTERNAL_STORAGE granted');
           return true;
         }
         
         if (status.isPermanentlyDenied) {
-          print('❌ MANAGE_EXTERNAL_STORAGE permanently denied');
+          // print('❌ MANAGE_EXTERNAL_STORAGE permanently denied');
           // Still try regular storage permission as fallback
         }
         
         // Fallback to regular storage permission
-        print('🔐 Fallback to regular storage permissions...');
+        // print('🔐 Fallback to regular storage permissions...');
         final storageStatus = await Permission.storage.request();
-        print('📋 Storage permission result: $storageStatus');
+        // print('📋 Storage permission result: $storageStatus');
         return storageStatus.isGranted;
       } else {
         // Android 10 and below
-        print('🔐 Requesting storage permissions for Android 10 and below...');
+        // print('🔐 Requesting storage permissions for Android 10 and below...');
         final status = await Permission.storage.request();
-        print('📋 Storage permission result: $status');
+        // print('📋 Storage permission result: $status');
         return status.isGranted;
       }
     }
-    print('✅ Non-Android platform, no permissions needed');
+    // print('✅ Non-Android platform, no permissions needed');
     return true; // iOS and other platforms don't need explicit permission
   }
 

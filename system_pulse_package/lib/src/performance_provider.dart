@@ -35,7 +35,7 @@ class PerformanceProvider extends ChangeNotifier {
       _currentData = PerformanceData.fromMap(Map<String, dynamic>.from(result));
       notifyListeners();
     } catch (e) {
-      debugPrint('Error collecting performance data: $e');
+      // debugPrint('Error collecting performance data: $e');
     }
   }
 

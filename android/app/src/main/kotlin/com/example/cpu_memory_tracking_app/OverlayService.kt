@@ -109,13 +109,13 @@ class OverlayService(private val context: Context) {
         cpuUsage = cpu
         memoryUsage = memory
         
-        println("DEBUG: OverlayService updating data - CPU: $cpu%, Memory: $memory%")
+        // println("DEBUG: OverlayService updating data - CPU: $cpu%, Memory: $memory%")
         
         overlayView?.post {
             // Show more precision for CPU since values are very small
             cpuText.text = "CPU: ${String.format("%.2f", cpu)}%"
             memoryText.text = "MEM: ${String.format("%.1f", memory)}%"
-            println("DEBUG: OverlayService UI updated - CPU text: ${cpuText.text}, Memory text: ${memoryText.text}")
+            // println("DEBUG: OverlayService UI updated - CPU text: ${cpuText.text}, Memory text: ${memoryText.text}")
         }
     }
 

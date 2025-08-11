@@ -26,7 +26,7 @@ class DeviceHardwareInfo {
 
   /// Get device hardware information directly from the platform
   static Future<DeviceHardwareInfo> getDeviceHardwareInfo() async {
-    print('🚀 Getting device hardware info...');
+    \\ // print('🚀 Getting device hardware info...');
     
     if (Platform.isAndroid) {
       return await _getAndroidHardwareInfo();
@@ -39,11 +39,11 @@ class DeviceHardwareInfo {
 
   /// Get Android-specific hardware information directly from device
   static Future<DeviceHardwareInfo> _getAndroidHardwareInfo() async {
-    print('🔍 Getting Android hardware info from device...');
+    // print('🔍 Getting Android hardware info from device...');
     
     final Map<dynamic, dynamic> result = await _channel.invokeMethod('getAndroidHardwareInfo');
     
-    print('✅ Received hardware info: $result');
+    // print('✅ Received hardware info: $result');
     
     return DeviceHardwareInfo(
       processorName: result['processorName'] ?? 'Android Processor',

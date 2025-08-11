@@ -69,13 +69,13 @@ class FloatingOverlayProvider extends ChangeNotifier {
   void _updateOverlayData() {
     final currentData = _performanceProvider?.currentData;
     if (currentData != null) {
-      print('DEBUG: Updating overlay with CPU: ${currentData.cpuUsage}%, Memory: ${currentData.memoryUsage}%');
+      // print('DEBUG: Updating overlay with CPU: ${currentData.cpuUsage}%, Memory: ${currentData.memoryUsage}%');
       FloatingOverlayService.updateOverlayData(
         cpuUsage: currentData.cpuUsage,
         memoryUsage: currentData.memoryUsage,
       );
     } else {
-      print('DEBUG: No current performance data available for overlay');
+      // print('DEBUG: No current performance data available for overlay');
     }
   }
 

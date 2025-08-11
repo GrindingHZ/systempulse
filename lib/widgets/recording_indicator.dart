@@ -5,11 +5,13 @@ import 'package:cpu_memory_tracking_app/utils/theme.dart';
 class RecordingIndicator extends StatefulWidget {
   final bool isRecording;
   final Duration duration;
+  final DateTime? lastAutoSave;
 
   const RecordingIndicator({
     super.key,
     required this.isRecording,
     required this.duration,
+    this.lastAutoSave,
   });
 
   @override
@@ -155,6 +157,40 @@ class _RecordingIndicatorState extends State<RecordingIndicator>
               ),
             ],
           ),
+          
+          // Auto-save indicator
+          if (widget.lastAutoSave != null) ...[
+            const SizedBox(width: 8),
+            
+            // Separator
+            Container(
+              width: 1,
+              height: 12,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+            
+            const SizedBox(width: 8),
+            
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  LucideIcons.shield,
+                  size: 12,
+                  color: AppTheme.successGreen,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'SAVED',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.successGreen,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
