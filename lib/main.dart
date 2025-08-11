@@ -20,12 +20,29 @@ class SystemPulseApp extends StatefulWidget {
 
 class _SystemPulseAppState extends State<SystemPulseApp> {
   bool _showPerformanceOverlay = false;
+  late PerformanceProvider _performanceProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _performanceProvider = PerformanceProvider();
+    // Initialize the performance provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _performanceProvider.initialize();
+    });
+  }
+
+  @override
+  void dispose() {
+    _performanceProvider.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => PerformanceProvider()),
+        ChangeNotifierProvider<PerformanceProvider>.value(value: _performanceProvider),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProxyProvider<PerformanceProvider, FloatingOverlayProvider>(
           create: (context) => FloatingOverlayProvider(),
