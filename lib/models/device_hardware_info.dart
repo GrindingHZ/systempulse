@@ -26,7 +26,7 @@ class DeviceHardwareInfo {
 
   /// Get device hardware information directly from the platform
   static Future<DeviceHardwareInfo> getDeviceHardwareInfo() async {
-    \\ // print('🚀 Getting device hardware info...');
+    // print('🚀 Getting device hardware info...');
     
     if (Platform.isAndroid) {
       return await _getAndroidHardwareInfo();

@@ -22,6 +22,8 @@ class RecordingSession {
 
   bool get isActive => endTime == null;
 
+  bool get isAutoSaved => id.contains('_autosave_') || id.contains('_emergency_');
+
   double get averageCpuUsage {
     if (dataPoints.isEmpty) return 0.0;
     return dataPoints.map((e) => e.cpuUsage).reduce((a, b) => a + b) / dataPoints.length;

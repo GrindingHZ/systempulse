@@ -127,7 +127,6 @@ class _DashboardView extends StatelessWidget {
                 child: RecordingIndicator(
                   isRecording: provider.isRecording,
                   duration: provider.currentRecordingDuration,
-                  lastAutoSave: provider.lastAutoSave,
                 ),
               );
             },
