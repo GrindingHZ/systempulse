@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:cpu_memory_tracking_app/providers/performance_provider.dart';
-import 'package:cpu_memory_tracking_app/providers/floating_overlay_provider.dart';
 import 'package:cpu_memory_tracking_app/utils/theme.dart';
 import 'package:cpu_memory_tracking_app/widgets/animated_gauge.dart';
 import 'package:cpu_memory_tracking_app/widgets/live_performance_chart.dart';
@@ -123,53 +122,15 @@ class _DashboardView extends StatelessWidget {
         actions: [
           Consumer<PerformanceProvider>(
             builder: (context, provider, child) {
-              return RecordingIndicator(
-                isRecording: provider.isRecording,
-                duration: provider.currentRecordingDuration,
-              );
-            },
-          ),
-          // Performance Overlay Toggle Button
-          if (onToggleOverlay != null)
-            IconButton(
-              icon: Icon(
-                showOverlay ? Icons.visibility_off : Icons.analytics,
-                color: showOverlay ? Colors.green : null,
-              ),
-              onPressed: onToggleOverlay,
-              tooltip: showOverlay ? 'Hide Performance Overlay' : 'Show Performance Overlay',
-            ),
-          // Floating Overlay Toggle Button
-          Consumer<FloatingOverlayProvider>(
-            builder: (context, overlayProvider, child) {
-              return IconButton(
-                icon: Icon(
-                  overlayProvider.isOverlayActive ? Icons.picture_in_picture : Icons.open_in_new,
-                  color: overlayProvider.isOverlayActive ? Colors.orange : null,
+              return Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: RecordingIndicator(
+                  isRecording: provider.isRecording,
+                  duration: provider.currentRecordingDuration,
                 ),
-                onPressed: () async {
-                  await overlayProvider.toggleOverlay();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          overlayProvider.isOverlayActive 
-                            ? 'Floating overlay started! You can now minimize the app and use other apps while monitoring performance.'
-                            : 'Floating overlay stopped.',
-                        ),
-                        duration: const Duration(seconds: 3),
-                        backgroundColor: overlayProvider.isOverlayActive ? Colors.green : Colors.orange,
-                      ),
-                    );
-                  }
-                },
-                tooltip: overlayProvider.isOverlayActive 
-                  ? 'Stop Floating Overlay' 
-                  : 'Start Floating Overlay',
               );
             },
           ),
-          const SizedBox(width: 16),
         ],
       ),
       body: Consumer<PerformanceProvider>(
