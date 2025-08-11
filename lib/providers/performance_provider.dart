@@ -12,7 +12,7 @@ import 'package:cpu_memory_tracking_app/services/notification_service.dart';
 import 'package:cpu_memory_tracking_app/services/file_export_service.dart';
 import 'package:cpu_memory_tracking_app/services/device_hardware_service.dart';
 
-class PerformanceProvider extends ChangeNotifier {
+class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const MethodChannel _channel = MethodChannel('performance_tracker');
   
   // Notification service
@@ -78,6 +78,8 @@ class PerformanceProvider extends ChangeNotifier {
 
   // Initialize the provider
   Future<void> initialize() async {
+    WidgetsBinding.instance.addObserver(this);
+    
     // Initialize notification service with callback
     await _notificationService.initialize(
       onStopRecording: () async {
@@ -95,13 +97,150 @@ class PerformanceProvider extends ChangeNotifier {
     
     // Start live monitoring
     _startLiveMonitoring();
+    
+    // Restore any ongoing recording from previous session
+    await _restoreRecordingState();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _recordingTimer?.cancel();
     _liveMonitoringTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    switch (state) {
+      case AppLifecycleState.paused:
+        _handleAppPaused();
+        break;
+      case AppLifecycleState.detached:
+        _handleAppDetached();
+        break;
+      case AppLifecycleState.resumed:
+        _handleAppResumed();
+        break;
+      case AppLifecycleState.inactive:
+        // App is transitioning between states, auto-save as precaution
+        _autoSaveCurrentRecording();
+        break;
+      case AppLifecycleState.hidden:
+        _handleAppPaused(); // Treat as paused
+        break;
+    }
+  }
+
+  // Handle app going to background
+  void _handleAppPaused() async {
+    print('DEBUG: App paused - auto-saving recording if active');
+    await _autoSaveCurrentRecording();
+    await _saveRecordingState();
+  }
+
+  // Handle app being killed/detached
+  void _handleAppDetached() async {
+    print('DEBUG: App detached - force saving recording');
+    await _autoSaveCurrentRecording();
+    await _clearRecordingState();
+  }
+
+  // Handle app returning to foreground
+  void _handleAppResumed() async {
+    print('DEBUG: App resumed - checking recording state');
+    // The recording should continue automatically if it was active
+  }
+
+  // Auto-save current recording without stopping it
+  Future<void> _autoSaveCurrentRecording() async {
+    if (!_isRecording || _currentSession == null) return;
+    
+    try {
+      print('DEBUG: Auto-saving current recording with ${_currentSession!.dataPoints.length} data points');
+      
+      // Create a snapshot of the current session
+      final snapshot = _currentSession!.copyWith(
+        endTime: DateTime.now(), // Mark current time as end for the snapshot
+      );
+      
+      // Save to CSV
+      String? filePath;
+      try {
+        filePath = await _saveSessionToCsv(snapshot);
+        print('DEBUG: Auto-save successful: $filePath');
+      } catch (e) {
+        print('DEBUG: Auto-save failed: $e');
+      }
+      
+      // Update session with file path
+      if (filePath != null) {
+        _currentSession = _currentSession!.copyWith(filePath: filePath);
+      }
+      
+      // Save current state to SharedPreferences for recovery
+      await _saveRecordingState();
+      
+    } catch (e) {
+      print('DEBUG: Auto-save error: $e');
+    }
+  }
+
+  // Save recording state for recovery after app restart
+  Future<void> _saveRecordingState() async {
+    if (!_isRecording || _currentSession == null) return;
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final state = {
+        'isRecording': true,
+        'sessionId': _currentSession!.id,
+        'startTime': _currentSession!.startTime.toIso8601String(),
+        'recordingInterval': _recordingInterval,
+        'dataPointsCount': _currentSession!.dataPoints.length,
+        'lastAutoSave': DateTime.now().toIso8601String(),
+      };
+      
+      await prefs.setString('recording_state', jsonEncode(state));
+      print('DEBUG: Recording state saved');
+    } catch (e) {
+      print('DEBUG: Failed to save recording state: $e');
+    }
+  }
+
+  // Restore recording state after app restart
+  Future<void> _restoreRecordingState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stateJson = prefs.getString('recording_state');
+      
+      if (stateJson != null) {
+        final state = jsonDecode(stateJson) as Map<String, dynamic>;
+        final isRecording = state['isRecording'] as bool? ?? false;
+        
+        if (isRecording) {
+          print('DEBUG: Found interrupted recording session, prompting user...');
+          // Note: In a real app, you might want to show a dialog to ask user
+          // For now, we'll just clear the state and not resume
+          await _clearRecordingState();
+        }
+      }
+    } catch (e) {
+      print('DEBUG: Failed to restore recording state: $e');
+    }
+  }
+
+  // Clear recording state
+  Future<void> _clearRecordingState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('recording_state');
+      print('DEBUG: Recording state cleared');
+    } catch (e) {
+      print('DEBUG: Failed to clear recording state: $e');
+    }
   }
 
   // Start live monitoring (always running)
@@ -273,6 +412,9 @@ class PerformanceProvider extends ChangeNotifier {
     } catch (e) {
       print('DEBUG: Failed to save sessions: $e');
     }
+    
+    // Clear recording state since we're done
+    await _clearRecordingState();
     
     notifyListeners();
     
