@@ -83,6 +83,16 @@ class _DashboardView extends StatelessWidget {
     this.showOverlay = false,
   });
 
+  Color _getBatteryColor(double batteryLevel) {
+    if (batteryLevel <= 20) {
+      return Colors.red;
+    } else if (batteryLevel <= 50) {
+      return Colors.orange;
+    } else {
+      return Colors.green;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -225,6 +235,84 @@ class _DashboardView extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Battery Bar
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.battery,
+                                  color: _getBatteryColor(currentData?.batteryLevel ?? 0.0),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Battery',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${(currentData?.batteryLevel ?? 0.0).toStringAsFixed(1)}%',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: _getBatteryColor(currentData?.batteryLevel ?? 0.0),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          height: 12,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            color: Theme.of(context).colorScheme.surfaceVariant,
+                          ),
+                          child: FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: (currentData?.batteryLevel ?? 0.0) / 100.0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(6),
+                                color: _getBatteryColor(currentData?.batteryLevel ?? 0.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              currentData?.batteryStatus ?? 'Unknown',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            Text(
+                              currentData?.isCharging == true ? 'Charging' : 'Not Charging',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: currentData?.isCharging == true ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 24),
@@ -388,6 +476,68 @@ class _DashboardView extends StatelessWidget {
                   },
                 ),
 
+                const SizedBox(height: 24),
+
+                // Battery Details Card
+                Consumer<PerformanceProvider>(
+                  builder: (context, provider, child) {
+                    final currentData = provider.currentData;
+                    
+                    if (currentData == null) {
+                      return const SizedBox();
+                    }
+                    
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.battery,
+                                  color: _getBatteryColor(currentData.batteryLevel),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Battery Information',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Real-time battery status
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildBatteryDetail(
+                                  context,
+                                  'Level',
+                                  '${currentData.batteryLevel.toStringAsFixed(1)}%',
+                                  _getBatteryColor(currentData.batteryLevel),
+                                ),
+                                _buildBatteryDetail(
+                                  context,
+                                  'Temperature',
+                                  '${currentData.batteryTemperature.toStringAsFixed(1)}°C',
+                                  _getBatteryTemperatureColor(currentData.batteryTemperature),
+                                ),
+                                _buildBatteryDetail(
+                                  context,
+                                  'Status',
+                                  currentData.batteryStatus,
+                                  currentData.isCharging ? Colors.green : Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
                 const SizedBox(height: 100), // Bottom padding for FAB
               ],
             ),
@@ -495,6 +645,39 @@ class _DashboardView extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildBatteryDetail(BuildContext context, String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getBatteryTemperatureColor(double temperature) {
+    if (temperature > 35.0) { // Hot battery (>35°C)
+      return Colors.red;
+    } else if (temperature > 30.0) { // Warm battery (>30°C)
+      return Colors.orange;
+    } else if (temperature < 10.0) { // Cold battery (<10°C)
+      return Colors.blue;
+    } else {
+      return Colors.green; // Normal temperature
+    }
   }
 
   Future<void> _showStopRecordingDialog(BuildContext context, PerformanceProvider provider) async {

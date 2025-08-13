@@ -179,6 +179,10 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
           memoryUsage: (result['memoryUsage'] as num?)?.toDouble() ?? 0.0,
           memoryUsedMB: (result['memoryUsedMB'] as num?)?.toDouble() ?? 0.0,
           memoryTotalMB: (result['memoryTotalMB'] as num?)?.toDouble() ?? 0.0,
+          batteryLevel: (result['batteryLevel'] as num?)?.toDouble() ?? 0.0,
+          batteryTemperature: (result['batteryTemperature'] as num?)?.toDouble() ?? 0.0,
+          batteryStatus: result['batteryStatus']?.toString() ?? 'Unknown',
+          isCharging: result['isCharging'] ?? false,
         );
       }
     } catch (e) {
@@ -191,6 +195,10 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
       memoryUsage: 0.0,
       memoryUsedMB: 0.0,
       memoryTotalMB: 0.0,
+      batteryLevel: 0.0,
+      batteryTemperature: 0.0,
+      batteryStatus: 'Unknown',
+      isCharging: false,
     );
   }
 
@@ -332,7 +340,7 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
       ..writeln('# Duration,${session.duration.toString()}')
       ..writeln('# Data Points,${session.dataPoints.length}')
       ..writeln('')
-      ..writeln('Timestamp,CPU Usage (%),Memory Usage (%),Memory Used (MB),Memory Total (MB)');
+      ..writeln('Timestamp,CPU Usage (%),Memory Usage (%),Memory Used (MB),Memory Total (MB),Battery Level (%),Battery Temperature (°C),Battery Status,Is Charging');
     
     for (final dataPoint in session.dataPoints) {
       buffer.writeln([
@@ -341,6 +349,10 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
         dataPoint.memoryUsage.toStringAsFixed(2),
         dataPoint.memoryUsedMB.toStringAsFixed(0),
         dataPoint.memoryTotalMB.toStringAsFixed(0),
+        dataPoint.batteryLevel.toStringAsFixed(1),
+        dataPoint.batteryTemperature.toStringAsFixed(1),
+        dataPoint.batteryStatus,
+        dataPoint.isCharging ? 'Yes' : 'No',
       ].join(','));
     }
     

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:cpu_memory_tracking_app/providers/performance_provider.dart';
 import 'package:cpu_memory_tracking_app/models/performance_data.dart';
 import 'package:cpu_memory_tracking_app/widgets/animated_grid_overlay.dart';
+import 'package:cpu_memory_tracking_app/utils/theme.dart';
 
 class LivePerformanceChart extends StatelessWidget {
   final double height;
@@ -28,9 +29,9 @@ class LivePerformanceChart extends StatelessWidget {
     final textColor = isDark ? Colors.white70 : Colors.black54;
     final gridColor = isDark ? const Color(0xFFBBBBBB) : const Color(0xFF999999); // Whitish in dark mode, darker in light mode
     
-    // Correct Task Manager colors (CPU = blue, Memory = green)
-    final cpuColor = isDark ? const Color(0xFF00AAFF) : const Color(0xFF0078D4); // CPU is BLUE
-    final memoryColor = isDark ? const Color(0xFF00D084) : const Color(0xFF00AA44); // Memory is GREEN
+    // Use AppTheme colors to match the gauges and legend
+    final cpuColor = AppTheme.primaryBlue; // CPU is BLUE - matches gauge
+    final memoryColor = AppTheme.accentTeal; // Memory is TEAL - matches gauge
     
     return Consumer<PerformanceProvider>(
       builder: (context, provider, child) {

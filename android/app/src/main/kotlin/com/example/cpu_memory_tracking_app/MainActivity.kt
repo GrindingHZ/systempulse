@@ -5,14 +5,17 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.BatteryManager
 import android.os.Binder
 import android.os.Build
 import android.os.Debug
@@ -105,11 +108,16 @@ class MainActivity : FlutterFragmentActivity(), SensorEventListener {
                     if (isServiceBound && cpuMonitoringService != null) {
                         val cpuUsage = cpuMonitoringService!!.getCurrentCpuUsage()
                         val memoryInfo = getCurrentMemoryUsage()
+                        val batteryInfo = getBatteryInfo()
                         val performanceData = mapOf(
                             "cpuUsage" to cpuUsage,
                             "memoryUsage" to (memoryInfo["memoryPercentage"] as Double),
                             "memoryUsedMB" to ((memoryInfo["usedMemory"] as Long) / (1024 * 1024)),
-                            "memoryTotalMB" to ((memoryInfo["totalMemory"] as Long) / (1024 * 1024))
+                            "memoryTotalMB" to ((memoryInfo["totalMemory"] as Long) / (1024 * 1024)),
+                            "batteryLevel" to batteryInfo["level"],
+                            "batteryTemperature" to batteryInfo["temperature"],
+                            "batteryStatus" to batteryInfo["status"],
+                            "isCharging" to batteryInfo["isCharging"]
                         )
                         result.success(performanceData)
                     } else {
@@ -139,11 +147,16 @@ class MainActivity : FlutterFragmentActivity(), SensorEventListener {
                     if (isServiceBound && cpuMonitoringService != null) {
                         val cpuUsage = cpuMonitoringService!!.getCurrentCpuUsage()
                         val memoryInfo = getCurrentMemoryUsage()
+                        val batteryInfo = getBatteryInfo()
                         val performanceData = mapOf(
                             "cpuUsage" to cpuUsage,
                             "memoryUsage" to (memoryInfo["memoryPercentage"] as Double),
                             "memoryUsedMB" to ((memoryInfo["usedMemory"] as Long) / (1024 * 1024)),
-                            "memoryTotalMB" to ((memoryInfo["totalMemory"] as Long) / (1024 * 1024))
+                            "memoryTotalMB" to ((memoryInfo["totalMemory"] as Long) / (1024 * 1024)),
+                            "batteryLevel" to batteryInfo["level"],
+                            "batteryTemperature" to batteryInfo["temperature"],
+                            "batteryStatus" to batteryInfo["status"],
+                            "isCharging" to batteryInfo["isCharging"]
                         )
                         result.success(performanceData)
                     } else {
@@ -176,11 +189,16 @@ class MainActivity : FlutterFragmentActivity(), SensorEventListener {
                     if (isServiceBound && cpuMonitoringService != null) {
                         val cpuUsage = cpuMonitoringService!!.getCurrentCpuUsage()
                         val memoryInfo = getCurrentMemoryUsage()
+                        val batteryInfo = getBatteryInfo()
                         val performanceData = mapOf(
                             "cpuUsage" to cpuUsage,
                             "memoryUsage" to (memoryInfo["memoryPercentage"] as Double),
                             "memoryUsedMB" to ((memoryInfo["usedMemory"] as Long) / (1024 * 1024)),
-                            "memoryTotalMB" to ((memoryInfo["totalMemory"] as Long) / (1024 * 1024))
+                            "memoryTotalMB" to ((memoryInfo["totalMemory"] as Long) / (1024 * 1024)),
+                            "batteryLevel" to batteryInfo["level"],
+                            "batteryTemperature" to batteryInfo["temperature"],
+                            "batteryStatus" to batteryInfo["status"],
+                            "isCharging" to batteryInfo["isCharging"]
                         )
                         result.success(performanceData)
                     } else {
@@ -317,6 +335,70 @@ class MainActivity : FlutterFragmentActivity(), SensorEventListener {
             hardwareInfo["error"] = e.message ?: "Unknown error retrieving hardware info"
         }
         return hardwareInfo
+    }
+
+    private fun getBatteryInfo(): Map<String, Any> {
+        val batteryIntent = applicationContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val batteryInfo = mutableMapOf<String, Any>()
+        
+        try {
+            if (batteryIntent != null) {
+                // Battery level (0-100)
+                val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                val batteryLevel = if (level != -1 && scale != -1) {
+                    (level * 100.0 / scale)
+                } else {
+                    0.0
+                }
+                batteryInfo["level"] = batteryLevel
+                
+                // Battery temperature (in tenths of a degree Celsius)
+                val temp = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
+                val batteryTemp = if (temp != -1) {
+                    temp / 10.0 // Convert to Celsius
+                } else {
+                    0.0
+                }
+                batteryInfo["temperature"] = batteryTemp
+                
+                // Battery status
+                val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                val batteryStatus = when (status) {
+                    BatteryManager.BATTERY_STATUS_CHARGING -> "Charging"
+                    BatteryManager.BATTERY_STATUS_DISCHARGING -> "Discharging"
+                    BatteryManager.BATTERY_STATUS_FULL -> "Full"
+                    BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "Not Charging"
+                    BatteryManager.BATTERY_STATUS_UNKNOWN -> "Unknown"
+                    else -> "Unknown"
+                }
+                batteryInfo["status"] = batteryStatus
+                
+                // Is charging
+                val plugged = batteryIntent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)
+                val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || 
+                               status == BatteryManager.BATTERY_STATUS_FULL ||
+                               plugged == BatteryManager.BATTERY_PLUGGED_AC ||
+                               plugged == BatteryManager.BATTERY_PLUGGED_USB ||
+                               plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS
+                batteryInfo["isCharging"] = isCharging
+                
+            } else {
+                // Fallback values if battery intent is null
+                batteryInfo["level"] = 0.0
+                batteryInfo["temperature"] = 0.0
+                batteryInfo["status"] = "Unknown"
+                batteryInfo["isCharging"] = false
+            }
+        } catch (e: Exception) {
+            // Fallback values if any error occurs
+            batteryInfo["level"] = 0.0
+            batteryInfo["temperature"] = 0.0
+            batteryInfo["status"] = "Error"
+            batteryInfo["isCharging"] = false
+        }
+        
+        return batteryInfo
     }
 }
 
