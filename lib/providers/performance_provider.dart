@@ -46,9 +46,8 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   NotificationService get notificationService => _notificationService;
   FileExportService get fileExportService => _fileExportService;
 
-  PerformanceProvider() {
-    initialize();
-  }
+  // Constructor - don't auto-initialize, let main.dart control when to initialize
+  PerformanceProvider();
 
   Future<void> initialize() async {
     WidgetsBinding.instance.addObserver(this);
@@ -101,29 +100,9 @@ class PerformanceProvider extends ChangeNotifier with WidgetsBindingObserver {
   void _handleAppKilled() {
     if (_isRecording && _currentSession != null && !_hasAutoSaved) {
       _hasAutoSaved = true;
-      _performImmediateAutoSave();
+      // No need to save here - _saveRecordingState() is already called periodically during recording
+      // The recording state will be restored automatically on next app startup
     }
-  }
-
-  void _performImmediateAutoSave() {
-    try {
-      final snapshot = _currentSession!.copyWith(
-        endTime: DateTime.now(),
-        id: '${_currentSession!.id}_autosave_${DateTime.now().millisecondsSinceEpoch}',
-      );
-      
-      _sessions.insert(0, snapshot);
-      _saveSessionsImmediately();
-      
-      // Note: Don't show notification here as the app is being killed
-      // The notification will be shown on next app restart in _restoreRecordingState
-    } catch (e) {
-      // Silent fail for emergency save
-    }
-  }
-
-  void _saveSessionsImmediately() {
-    _saveSessions().catchError((_) {});
   }
 
   Future<void> _saveRecordingState() async {
