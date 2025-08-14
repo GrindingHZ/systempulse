@@ -148,6 +148,50 @@ class RecordingDetailScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricCard(
+                            context,
+                            'Average Battery',
+                            '${session.averageBatteryLevel.toStringAsFixed(1)}%',
+                            Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMetricCard(
+                            context,
+                            'Min Battery',
+                            '${session.minBatteryLevel.toStringAsFixed(1)}%',
+                            Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricCard(
+                            context,
+                            'Max Battery Temp',
+                            '${session.maxBatteryTemperature.toStringAsFixed(1)}°C',
+                            Colors.red,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMetricCard(
+                            context,
+                            'Final Status',
+                            session.finalBatteryStatus,
+                            session.wasChargingDuringRecording ? Colors.green : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -173,6 +217,16 @@ class RecordingDetailScreen extends StatelessWidget {
               LucideIcons.hardDrive,
               session.dataPoints,
               false, // isMemoryChart
+            ),
+
+            const SizedBox(height: 16),
+
+            // Battery Chart
+            _buildBatteryChartCard(
+              context,
+              'Battery Level Over Time',
+              LucideIcons.battery,
+              session.dataPoints,
             ),
           ],
         ),
@@ -423,6 +477,189 @@ class RecordingDetailScreen extends StatelessWidget {
     } else {
       return '${seconds}s';
     }
+  }
+
+  Widget _buildBatteryChartCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    List<dynamic> dataPoints,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.green,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                // Legend for battery chart
+                Row(
+                  children: [
+                    _buildChartLegend('Level', Colors.green),
+                    const SizedBox(width: 16),
+                    _buildChartLegend('Temp (×2)', Colors.orange),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 250,
+              child: _buildBatteryChart(context, dataPoints),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartLegend(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBatteryChart(BuildContext context, List<dynamic> dataPoints) {
+    if (dataPoints.isEmpty) {
+      return const Center(child: Text('No data available'));
+    }
+
+    final batterySpots = dataPoints.asMap().entries.map((entry) {
+      return FlSpot(entry.key.toDouble(), entry.value.batteryLevel);
+    }).toList();
+
+    final tempSpots = dataPoints.asMap().entries.map((entry) {
+      // Scale temperature to 0-100 range for visualization (assuming max temp around 50°C)
+      final scaledTemp = (entry.value.batteryTemperature * 2).clamp(0.0, 100.0);
+      return FlSpot(entry.key.toDouble(), scaledTemp);
+    }).toList();
+
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: true,
+          horizontalInterval: 25,
+          verticalInterval: dataPoints.length > 20 ? dataPoints.length / 10 : 5,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              strokeWidth: 1,
+            );
+          },
+          getDrawingVerticalLine: (value) {
+            return FlLine(
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+              strokeWidth: 1,
+            );
+          },
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: dataPoints.length > 20 ? dataPoints.length / 5 : 5,
+              getTitlesWidget: (value, meta) {
+                if (value.toInt() >= 0 && value.toInt() < dataPoints.length) {
+                  final timestamp = dataPoints[value.toInt()].timestamp;
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      DateFormat('HH:mm').format(timestamp),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  );
+                }
+                return const Text('');
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              interval: 25,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  '${value.toInt()}%',
+                  style: Theme.of(context).textTheme.bodySmall,
+                );
+              },
+            ),
+          ),
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
+        ),
+        minX: 0,
+        maxX: (dataPoints.length - 1).toDouble(),
+        minY: 0,
+        maxY: 100,
+        lineBarsData: [
+          // Battery level line
+          LineChartBarData(
+            spots: batterySpots,
+            isCurved: true,
+            color: Colors.green,
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Colors.green.withValues(alpha: 0.1),
+            ),
+          ),
+          // Battery temperature line (scaled)
+          LineChartBarData(
+            spots: tempSpots,
+            isCurved: true,
+            color: Colors.orange,
+            barWidth: 2,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(show: false),
+            dashArray: [5, 5], // Dashed line for temperature
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _exportCsv(BuildContext context) async {

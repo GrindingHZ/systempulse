@@ -44,6 +44,44 @@ class RecordingSession {
     return dataPoints.map((e) => e.memoryUsage).reduce((a, b) => a > b ? a : b);
   }
 
+  double get averageBatteryLevel {
+    if (dataPoints.isEmpty) return 0.0;
+    return dataPoints.map((e) => e.batteryLevel).reduce((a, b) => a + b) / dataPoints.length;
+  }
+
+  double get minBatteryLevel {
+    if (dataPoints.isEmpty) return 0.0;
+    return dataPoints.map((e) => e.batteryLevel).reduce((a, b) => a < b ? a : b);
+  }
+
+  double get maxBatteryLevel {
+    if (dataPoints.isEmpty) return 0.0;
+    return dataPoints.map((e) => e.batteryLevel).reduce((a, b) => a > b ? a : b);
+  }
+
+  double get averageBatteryTemperature {
+    if (dataPoints.isEmpty) return 0.0;
+    return dataPoints.map((e) => e.batteryTemperature).reduce((a, b) => a + b) / dataPoints.length;
+  }
+
+  double get maxBatteryTemperature {
+    if (dataPoints.isEmpty) return 0.0;
+    return dataPoints.map((e) => e.batteryTemperature).reduce((a, b) => a > b ? a : b);
+  }
+
+  // Battery status at the end of recording
+  String get finalBatteryStatus {
+    if (dataPoints.isEmpty) return 'Unknown';
+    return dataPoints.last.batteryStatus;
+  }
+
+  // Check if device was charging during most of the recording
+  bool get wasChargingDuringRecording {
+    if (dataPoints.isEmpty) return false;
+    final chargingCount = dataPoints.where((e) => e.isCharging).length;
+    return chargingCount > (dataPoints.length / 2);
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

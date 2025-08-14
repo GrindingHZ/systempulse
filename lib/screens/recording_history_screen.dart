@@ -179,6 +179,31 @@ class _RecordingSessionCard extends StatelessWidget {
 
               const SizedBox(height: 12),
 
+              // Battery metrics
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricChip(
+                      context,
+                      'Avg Battery',
+                      '${session.averageBatteryLevel.toStringAsFixed(1)}%',
+                      Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMetricChip(
+                      context,
+                      'Min Battery',
+                      '${session.minBatteryLevel.toStringAsFixed(1)}%',
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
               // Action buttons
               Row(
                 children: [
