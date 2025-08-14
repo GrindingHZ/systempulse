@@ -129,19 +129,7 @@ class _DashboardView extends StatelessWidget {
             const Text('SystemPulse'),
           ],
         ),
-        actions: [
-          Consumer<PerformanceProvider>(
-            builder: (context, provider, child) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: RecordingIndicator(
-                  isRecording: provider.isRecording,
-                  duration: provider.currentRecordingDuration,
-                ),
-              );
-            },
-          ),
-        ],
+        actions: [],
       ),
       body: Consumer<PerformanceProvider>(
         builder: (context, provider, child) {
@@ -181,6 +169,49 @@ class _DashboardView extends StatelessWidget {
                       ],
                     ),
                   ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Recording Status Card
+                Consumer<PerformanceProvider>(
+                  builder: (context, provider, child) {
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Icon(
+                              provider.isRecording ? LucideIcons.circle : LucideIcons.square,
+                              color: provider.isRecording ? Colors.red : Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  provider.isRecording ? 'Recording in Progress' : 'Ready to Record',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                if (provider.isRecording)
+                                  RecordingIndicator(
+                                    isRecording: provider.isRecording,
+                                    duration: provider.currentRecordingDuration,
+                                  )
+                                else
+                                  Text(
+                                    'Tap Start Recording to begin',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 16),

@@ -502,15 +502,15 @@ class RecordingDetailScreen extends StatelessWidget {
                   title,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const Spacer(),
-                // Legend for battery chart
-                Row(
-                  children: [
-                    _buildChartLegend('Level', Colors.green),
-                    const SizedBox(width: 16),
-                    _buildChartLegend('Temp (×2)', Colors.orange),
-                  ],
-                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Legend for battery chart
+            Row(
+              children: [
+                _buildChartLegend('Level', Colors.green),
+                const SizedBox(width: 16),
+                _buildChartLegend('Temp (°C)', Colors.orange),
               ],
             ),
             const SizedBox(height: 16),
@@ -555,9 +555,8 @@ class RecordingDetailScreen extends StatelessWidget {
     }).toList();
 
     final tempSpots = dataPoints.asMap().entries.map((entry) {
-      // Scale temperature to 0-100 range for visualization (assuming max temp around 50°C)
-      final scaledTemp = (entry.value.batteryTemperature * 2).clamp(0.0, 100.0);
-      return FlSpot(entry.key.toDouble(), scaledTemp);
+      // Use actual temperature values in Celsius
+      return FlSpot(entry.key.toDouble(), entry.value.batteryTemperature);
     }).toList();
 
     return LineChart(
@@ -582,9 +581,6 @@ class RecordingDetailScreen extends StatelessWidget {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
           ),
@@ -611,13 +607,36 @@ class RecordingDetailScreen extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 40,
-              interval: 25,
+              reservedSize: 45,
+              interval: 20,
               getTitlesWidget: (value, meta) {
-                return Text(
-                  '${value.toInt()}%',
-                  style: Theme.of(context).textTheme.bodySmall,
-                );
+                if (value <= 100) {
+                  return Text(
+                    '${value.toInt()}%',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.green,
+                    ),
+                  );
+                }
+                return const Text('');
+              },
+            ),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 45,
+              interval: 10,
+              getTitlesWidget: (value, meta) {
+                if (value <= 60 && value >= 0) {
+                  return Text(
+                    '${value.toInt()}°C',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.orange,
+                    ),
+                  );
+                }
+                return const Text('');
               },
             ),
           ),
@@ -646,7 +665,7 @@ class RecordingDetailScreen extends StatelessWidget {
               color: Colors.green.withValues(alpha: 0.1),
             ),
           ),
-          // Battery temperature line (scaled)
+          // Battery temperature line
           LineChartBarData(
             spots: tempSpots,
             isCurved: true,
