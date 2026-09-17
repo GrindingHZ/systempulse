@@ -37,10 +37,20 @@ pluginManagement {
     }
 }
 
+/*
+ * Version floors are enforced by Flutter's DependencyVersionChecker, which fails the build below
+ * Gradle 8.14.0, AGP 8.11.1 and Kotlin 2.2.20 for this SDK. The versions here are the lowest that
+ * clear all three.
+ *
+ * Flutter's own template targets Gradle 9.3.1 / AGP 9.1.0 / Kotlin 2.4.0, which would also silence
+ * the checker's (non-fatal) "consider upgrading" warnings. That jump is deliberately not taken
+ * here: AGP 9 is a major release that removes DSL this build file still uses, and it is not a
+ * change to make blind. Upgrading is a worthwhile follow-up on a machine that can run the build.
+ */
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "8.7.3" apply false
-    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    id("com.android.application") version "8.11.1" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 
 include(":app")
