@@ -12,3 +12,16 @@
 # attribute so the original file names are not shipped.
 -renamesourcefileattribute SourceFile
 -keepattributes SourceFile,LineNumberTable
+
+# Flutter's embedding contains PlayStoreDeferredComponentManager, which references the Play Core
+# library. Play Core is only a dependency of apps that use deferred components / split installs.
+# This app does not, so those classes are absent and R8 fails the build outright:
+#
+#   Missing class com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener
+#   (referenced from: io.flutter.embedding.engine.deferredcomponents.PlayStoreDeferredComponentManager)
+#   Execution failed for task ':app:minifyReleaseWithR8'
+#
+# The references are genuinely unreachable — nothing constructs that manager unless deferred
+# components are enabled — so R8 strips the class and the dangling references go with it. Adding
+# the Play Core dependency instead would ship a library the app never calls.
+-dontwarn com.google.android.play.core.**
