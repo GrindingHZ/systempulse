@@ -1,103 +1,131 @@
-# SystemPulse - CPU & Memory Monitor
+# SystemPulse
 
-![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+Measures how much CPU this app's own process uses, how much memory the device has in use, and what
+the battery is doing — live, or recorded to a file you can export as CSV.
 
-A Flutter application for monitoring real-time CPU and memory usage on Android devices. This app records the CPU usage of the app itself and memory usage of all phone processes, making it useful for developers who want to integrate performance monitoring into their own applications.
+Android is the supported platform. A Linux desktop preview build exists for working on the
+interface without a device.
 
-## Features
+## What the numbers mean
 
-- **App CPU Monitoring**: Records CPU usage of this app only (not system-wide)
-- **Memory Tracking**: Monitors memory usage of all phone processes
-- **Real-time Display**: Live gauges showing current CPU and memory usage
-- **Recording Sessions**: Start/stop recording with background data collection
-- **Smart Notifications**: Live updates during recording with stop button
-- **Interactive Charts**: Zoomable charts with performance data visualization
-- **CSV Export**: Export session data to CSV files with sharing options
-- **Device Information**: View complete hardware and system specifications
-- **Session History**: Manage and view all recorded sessions
-- **Theme Support**: Light, dark, and system theme options
-- **Settings**: Configure recording intervals and notification preferences
+Precision about definitions matters more here than in most apps, because "CPU usage" on a
+multi-core, frequency-scaling device can mean several different things.
 
-## For Developers
+| Reading | Definition |
+| --- | --- |
+| **App CPU** | This process's CPU time (user + system, all threads) divided by elapsed wall-clock time and core count. One fully busy thread on an 8-core device reads 12.5%. |
+| **CPU, one core** | The same measurement against a single core, so 100% is one core saturated and 400% is four. |
+| **Device memory** | `totalMem − availMem` for the whole device. Linux counts reclaimable page cache as used, so a healthy device reads high. This is *not* a pressure signal — "Memory pressure" is. |
+| **App memory** | This process's proportional set size: its private memory plus its share of anything mapped by several processes. |
+| **Battery** | Level, temperature and charge state from the system's battery broadcast. |
 
-This app is particularly useful for developers who want to:
-- **Monitor App Performance**: Integrate this monitoring code into your own app to track your app's CPU usage and system memory impact
-- **Performance Testing**: Use this as a reference implementation for adding app-specific CPU/memory monitoring to your applications
-- **App Impact Analysis**: Understand how your app uses CPU resources and affects system memory
-- **Code Integration**: Merge the monitoring functionality into your existing Flutter apps to monitor their performance
+A metric the device will not report shows as **—**, and exports leave that field empty. Nothing is
+estimated, substituted or interpolated.
 
-The app provides a complete implementation of app-specific CPU monitoring and system memory tracking that can be adapted and integrated into other Flutter applications.
+### How App CPU is measured
 
-## Screenshots
+`/proc/self/stat` is sampled on a fixed interval and the difference between consecutive readings is
+divided by the elapsed time:
 
-![image](https://github.com/user-attachments/assets/7003c2eb-6d46-4d56-b4d8-d7b7fd827da0)
+```
+utilisation = (cpuTimeNow − cpuTimeBefore) / (wallClockNow − wallClockBefore) / coreCount
+```
 
-## Requirements
+This is the same definition `top` uses. A process's own `/proc` entry is always readable regardless
+of SELinux policy, and `android.os.Process.getElapsedCpuTime()` is the fallback if parsing fails.
 
-- Android 5.0 (API level 21) or higher
-- Flutter 3.8.1 or higher (for development)
+> **Note for anyone holding older exports from this app.** Before this rewrite, the column labelled
+> CPU usage was not utilisation at all: it averaged `scaling_cur_freq / cpuinfo_max_freq` across
+> cores — the clock-speed ratio, read from global sysfs rather than from this process. An idle
+> device reported a large non-zero figure because idle cores park at their minimum frequency, a
+> throttled but fully busy process reported *less* than an idle one, and on devices where sysfs is
+> restricted it silently reported exactly `0.00`. **CSV files produced before this change are not
+> comparable with ones produced after it, and the old values should not be treated as CPU usage.**
 
-## Installation
+## Recording
 
-### For Users
-1. Download the APK from the releases section
-2. Install on your Android device
-3. Grant necessary permissions when prompted
+Recording runs in an Android foreground service, so it continues while the app is in the background.
+Each sample is appended to disk as it is taken, which bounds the loss from an unexpected process
+death to a few seconds rather than the whole session. If the app is killed mid-recording, the
+session is closed out at its last recorded sample on next launch and marked **Recovered**.
 
-### For Developers
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd cpu_memory_tracking_app
-   ```
+Storage layout, under the app's private files directory:
 
-2. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
+```
+sessions/<id>.json     session header: timestamps, sample count, interval
+sessions/<id>.jsonl    append-only sample stream, one JSON object per line
+```
 
-3. Run the app:
-   ```bash
-   flutter run
-   ```
+Timestamps are stored and exported in UTC and shown in local time.
 
-## How to Use
+## Exporting
 
-1. **Start Monitoring**: Open the app to see real-time CPU and memory usage
-2. **Record Sessions**: Tap the record button to start collecting data
-3. **View Notifications**: Check the notification bar for live updates during recording
-4. **Stop Recording**: Use the stop button in the notification or app
-5. **Export Data**: Access session history and export to CSV files
-6. **Device Info**: View your device specifications in the info section
+Export writes RFC 4180 CSV into the system Downloads collection through MediaStore, which requires
+no storage permission on Android 10 and later. `MANAGE_EXTERNAL_STORAGE` is deliberately not
+requested: it grants access to the entire shared volume and Google Play does not accept it for an
+app of this kind.
 
 ## Permissions
 
-- **Storage**: To save CSV files
-- **Notifications**: To display recording status and controls
+| Permission | Why |
+| --- | --- |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keep sampling while the app is backgrounded during a recording the user started. |
+| `POST_NOTIFICATIONS` | Show the ongoing recording notification. Requested when a recording starts; denying it does not stop the recording. |
+| `WRITE_EXTERNAL_STORAGE` (API ≤ 28 only) | Exporting on releases predating scoped storage. |
 
-## Technical Details
+## Building
 
-- **Platform**: Android (Flutter framework)
-- **CPU Monitoring**: Tracks CPU usage of this app only (not system-wide CPU)
-- **Memory Monitoring**: Monitors system-wide memory usage of all processes
-- **Architecture**: Provider pattern for state management
-- **Data Storage**: Local storage with SharedPreferences
-- **Charts**: FL Chart library for data visualization
-- **Native Code**: Kotlin for Android-specific performance monitoring
-- **Integration Ready**: Code can be merged into existing Flutter apps for app-specific performance monitoring
+```bash
+flutter pub get
+flutter run                       # debug, on a connected Android device
+flutter build apk --release
+```
 
-## Contributing
+### Release signing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+Release builds read `android/key.properties`, which is git-ignored. Copy
+`android/key.properties.example` and fill it in:
 
-## License
+```bash
+keytool -genkey -v -keystore android/upload-keystore.jks \
+        -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
 
-This project is licensed under the MIT License.
+Without that file the release build still completes but is signed with the **debug** key and prints
+a warning. Google Play rejects debug-signed uploads.
 
----
+### Previewing the interface without a device
 
-**Built with Flutter for Android**
+```bash
+flutter run -d linux -t lib/dev/preview_main.dart
+```
+
+`lib/dev/` supplies scripted telemetry through the same `MetricsSource` interface the real app uses.
+It is not referenced from `main.dart`, so it never reaches a release build.
+
+## Tests
+
+```bash
+flutter test --exclude-tags golden          # unit and controller tests
+flutter test --tags golden                  # render the screens and compare to committed images
+flutter test --tags golden --update-goldens # after an intentional UI change
+cd android && ./gradlew :app:testDebugUnitTest
+```
+
+The Kotlin tests cover the `/proc/self/stat` parser — including process names containing spaces and
+parentheses, which break naive whitespace splitting — and the utilisation arithmetic.
+
+## Layout
+
+```
+lib/
+  design/      tokens, iOS type scale, and the components built from them
+  data/        models, the platform channel, file-backed storage, CSV export
+  state/       MonitorController: sampling, recording lifecycle, settings
+  features/    one file per screen
+  dev/         scripted telemetry for the preview build
+android/app/src/main/kotlin/com/systempulse/monitor/
+  metrics/     CPU, memory, battery and device-info sampling
+  recording/   the foreground service and its append-only sample writer
+  export/      MediaStore writer
+```
