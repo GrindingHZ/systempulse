@@ -1,5 +1,5 @@
-name: cpu_memory_tracking_app
-description: "SystemPulse - System Performance Monitor"
+name: systempulse
+description: "SystemPulse - measures this app CPU time, device memory and battery over time."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -10,28 +10,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # iOS system icons. Used instead of lucide_icons, which extends IconData - now a final class,
+  # so that package no longer compiles on current Flutter at all.
   cupertino_icons: ^1.0.8
-  
-  # State Management
-  provider: ^6.0.0
-  
-  # Charts and Visualization
-  fl_chart: ^0.68.0
-  
-  # File System and Storage
-  path_provider: ^2.1.2
-  csv: ^6.0.0
-  permission_handler: ^11.3.1
-  shared_preferences: ^2.3.4
-  flutter_local_notifications: ^18.0.1
-  share_plus: ^10.1.2
-  device_info_plus: ^10.1.2
-  
-  # Icons and UI Components
-  lucide_icons: ^0.257.0
-  
-  # Date and Time
-  intl: ^0.19.0
+
+  # State management.
+  provider: ^6.1.5
+
+  # Resolves a writable directory when no native implementation is registered.
+  path_provider: ^2.1.5
+
+  # Durable storage for small scalar preferences. Recorded samples live in files, not here.
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
@@ -45,7 +36,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   
   # App Icon Generation
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
