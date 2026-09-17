@@ -1,11 +1,20 @@
-gradle-wrapper.jar
+# The Gradle wrapper IS committed, unlike in Flutter's default template.
+#
+# Flutter's template ignores gradlew/gradlew.bat/gradle-wrapper.jar because `flutter build` drives
+# Gradle through its own tooling and never invokes the wrapper. But that leaves the repository
+# unable to run Gradle directly — `./gradlew :app:testDebugUnitTest` in CI fails with
+# "No such file or directory" — and leaves the Gradle version unpinned for anyone who does.
+# Committing it is the standard Android convention; CI validates the jar's checksum against
+# Gradle's published hashes via gradle/actions/wrapper-validation.
+
 /.gradle
 /captures/
-/gradlew
-/gradlew.bat
 /local.properties
 GeneratedPluginRegistrant.java
 .cxx/
+
+# Build output.
+/build/
 
 # Remember to never publicly share your keystore.
 # See https://flutter.dev/to/reference-keystore
