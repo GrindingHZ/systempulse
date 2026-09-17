@@ -113,7 +113,23 @@ cd android && ./gradlew :app:testDebugUnitTest
 ```
 
 The Kotlin tests cover the `/proc/self/stat` parser — including process names containing spaces and
-parentheses, which break naive whitespace splitting — and the utilisation arithmetic.
+parentheses, which break naive whitespace splitting — the utilisation arithmetic, and the
+append-only sample writer's durability behaviour.
+
+### The native/Dart contract
+
+The two sides communicate through the JSON Lines sample format and nothing else, which makes it the
+easiest seam to break silently. `test/fixtures/native_samples.jsonl` is **real output from the
+production Kotlin `SampleWriter`**, not a hand-written imitation, and `test/data/native_contract_test.dart`
+parses it. That test pins down the cases that actually bite:
+
+- The JVM's JSON encoder writes `77.0` as `77`, so whole-number doubles arrive as integers.
+- `cpuAvailable: false` alongside `cpuPercent: 0.0` must decode to null, not to a phantom idle reading.
+- A battery status of `"Charging, slowly"` must survive into CSV without adding a column.
+- A truncated trailing line — what a process kill actually leaves — must not discard the samples
+  before it.
+
+Regenerate the fixture if the schema changes; the sample shape is mirrored in `SampleWriterTest`.
 
 ## Layout
 
